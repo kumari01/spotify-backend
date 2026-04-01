@@ -1,4 +1,5 @@
 const MusicModel = require('../Models/music.model');
+const AlbumModel = require("../Models/albums.model")
 const {uploadFile} = require("../services/storage.services");
 const jwt = require('jsonwebtoken');
 
@@ -39,4 +40,36 @@ async function createMusic(req,res){
     res.status(201).json({message:"Music created successfully", music});
 
 }
-module.exports = {createMusic};
+
+
+async function createAlbums(req,res){
+    const token = req.cookies.token;
+    if(!token) {
+        return res.status(401).json({ message: 'Unauthorized' });
+    }
+    let decoded;
+    try{
+        decoded = jwt.verify(token, process.env.JWT_SECRET);
+        if (decoded.role !== "artist"){
+            return res.status(403).json({ message: 'Only artist has access to create album ' });
+        }
+        const {title, musics} = req.body;
+        if (!title) {
+            return res.status(400).json({ message: 'title is required' });
+        }
+        const album = await AlbumModel.create({
+            title,
+            artist : decoded.id,
+            musics: musics
+        });
+        await album.save();
+        res.status(201).json({message:"Album created successfully", album});
+
+    }
+    catch(Err){
+        return res.status(404).json({message: Err.message});
+    }
+
+}
+module.exports = {createMusic, createAlbums};
+
